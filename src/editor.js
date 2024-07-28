@@ -3,13 +3,11 @@ import { InspectorControls } from "@wordpress/block-editor";
 import { PanelBody } from "@wordpress/components";
 import {
 	__experimentalHStack as HStack,
-	_experimentalVStack as VStack,
 	TextControl,
 	Button,
 } from "@wordpress/components";
 import { Icon, trash } from "@wordpress/icons";
 import { addFilter } from "@wordpress/hooks";
-import { __ } from "@wordpress/i18n";
 import { useSelect } from "@wordpress/data";
 
 function addCustomAttributes(settings) {
@@ -83,7 +81,7 @@ const withAttributeControls = createHigherOrderComponent((BlockEdit) => {
 					<PanelBody title="HTML Attributes">
 						{Object.entries(props.attributes.attributesMap).map(
 							([locator, data]) => (
-								<>
+								<div key={locator}>
 									<HStack alignment="top">
 										<TextControl
 											value={locator}
@@ -133,8 +131,64 @@ const withAttributeControls = createHigherOrderComponent((BlockEdit) => {
 											Add attribute
 										</Button>
 									</HStack>
+									<div style={{ marginTop: "-24px", marginBottom: "32px" }}>
+										<TextControl
+											style={{
+												height: "24px",
+												minHeight: "24px",
+											}}
+											value={
+												Object.entries(data)
+													.map(([key, value]) => {
+														if (value === null) {
+															return `${key}=""`;
+														}
+														if (value === "") {
+															return key;
+														}
+														return `${key}="${value}"`;
+													})
+													.join(" ") || ""
+											}
+											onChange={(newValue) => {
+												let newAttributes = [];
+												if (newValue) {
+													newAttributes = newValue
+														.match(/(?:[^\s"]+|"[^"]*")+/g)
+														.map((pair) => {
+															if (pair.endsWith("=")) {
+																return [pair.replace("=", ""), null];
+															}
+															if (pair.includes("=")) {
+																return pair.split("=");
+															}
+															return [pair, ""];
+														})
+														.map(([key, value]) => {
+															if (value === null) {
+																return [key, value];
+															}
+															if (!value) {
+																return [key, ""];
+															}
+															return [key, value.replace(/"/g, "").trim()];
+														});
+												}
+												if (newValue[newValue.length - 1] === " ") {
+													newAttributes.push(["", ""]);
+												}
+												props.setAttributes({
+													attributesMap: {
+														...props.attributes.attributesMap,
+
+														[locator]: Object.fromEntries(newAttributes),
+													},
+												});
+											}}
+										/>
+									</div>
 									{Object.entries(data).map(([key, value]) => (
-										<div style={{ marginTop: "-16px" }}>
+										<div key={key} style={{ marginTop: "-24px" }}>
 											<HStack alignment="top">
 												<TextControl
 													style={{
@@ -195,7 +249,7 @@ const withAttributeControls = createHigherOrderComponent((BlockEdit) => {
 											</HStack>
 										</div>
 									))}
-								</>
+								</div>
 							),
 						)}
 						<Button
